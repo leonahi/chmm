@@ -61,7 +61,7 @@ __kernel void chmm(__global float* A,
             }
             
             //printf("partial_sum = %f : %d\n", partial_sum, global_id);
-            C[i + global_id*b_col_dim] = partial_sum;
+            C[i + global_id*b_col_dim] = alpha*partial_sum + beta*C[i + global_id*b_col_dim];
         }
     }
     
