@@ -6,18 +6,18 @@
 */
 
 /* Matrix A */
-#define A_dim 5
+#define A_DIM 1024
 
 /* Matrix B */
-#define B_row_dim 5
-#define B_col_dim 10
+#define B_ROW_DIM 1024
+#define B_COL_DIM 2048
 
 /* Matrix C */
-#define C_row_dim 5
-#define C_col_dim 10
+#define C_ROW_DIM 1024
+#define C_COL_DIM 2048
 
 /* alpha and beta */
-#define alpha 2
-#define beta 2
+#define ALPHA 2
+#define BETA 2
 
 
