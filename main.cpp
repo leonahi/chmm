@@ -17,6 +17,9 @@ using namespace std;
 //#define NUM_POINTS 1000
 
 #define TEST_CODE
+#define REAL_MATRIX   // Undefine it for complex matrices
+#define OPENCL_CODE
+
 
 extern void matrix_mult(float* A, float* B, float* C, int a_row_dim, int a_col_dim, int b_col_dim, float alpha_const);
 extern void matrix_add(float* X, float* C, int c_row_dim, int c_col_dim,float beta_const);
@@ -36,6 +39,8 @@ int main()
     cl_ulong local_mem_size;
     unsigned int num_points, points_per_group;
     
+    /*Matrix size*/
+    uint a_size, b_size, c_size, x_size;
     
     /* Data and Buffer */
     uint a_dim = A_DIM;
@@ -49,13 +54,32 @@ int main()
     float *B;
     float *X;
     float *C;
-    
-    cout << "Allocation space for A, B, C matrices.....";
-    A = new float[a_dim*a_dim];
-    B = new float[b_row_dim*b_col_dim];
-    C = new float[c_row_dim*c_col_dim];
-    X = new float[a_dim*b_col_dim];
+
+#ifdef REAL_MATRIX    
+    cout << "Allocation space for A, B, C  real matrices.....";
+    a_size = a_dim*a_dim;
+    b_size = b_row_dim*b_col_dim;
+    c_size = c_row_dim*c_col_dim;
+    x_size = a_dim*b_col_dim;
+    A = new float[a_size];
+    B = new float[b_size];
+    C = new float[c_size];
+    X = new float[x_size];
     cout << "Done!!" << endl;
+#endif
+
+#ifndef REAL_MATRIX
+    cout << "Allocation space for A, B, C  complex matrices.....";
+    a_size = 2*a_dim*a_dim;
+    b_size = 2*b_row_dim*b_col_dim;
+    c_size = 2*c_row_dim*c_col_dim;
+    x_size = 2*a_dim*b_col_dim;
+    A = new float[a_size];
+    B = new float[b_size];
+    C = new float[c_size];
+    X = new float[x_size];
+    cout << "Done!!" << endl;
+#endif    
     
     cl_mem A_buffer, B_buffer, C_buffer;
     
@@ -82,7 +106,7 @@ int main()
     cout << "Done!!" << endl;
     */
 #ifdef TEST_CODE
-    /* Checking for test code
+    /* Test code
      * 
      * A, B, C Initialized to 1
      * then X = aplha*A*B
@@ -90,19 +114,49 @@ int main()
      *      print C
      * 
      */
-    for(int i=0; i<(a_dim*a_dim); i++) 
+#ifdef REAL_MATRIX
+    for(int i=0; i<a_size; i++) 
         A[i] = 1.0;
-    for(int i=0; i<(b_row_dim*b_col_dim); i++)
+    for(int i=0; i<b_size; i++)
     {
         B[i] = 1.0;
         C[i] = 1.0;
     }        
-    //matrix_mult(A, B, X, a_dim, a_dim, b_col_dim, alpha);
-    //matrix_add(X, C, c_row_dim, c_col_dim, beta); 
+#endif
+
+#ifndef REAL_MATRIX
+    for(int i=0; i<a_size; i++) 
+    {
+        A[(2*i)] = 1.0; 
+        A[(2*i + 1)] = 1.0;
+    }
+     
+    for(int i=0; i<b_size; i++)
+    {
+        B[(2*i)] = 1.0;
+        B[(2*i + 1)] = 1.0;
+        
+        C[(2*i)] = 1.0;
+        C[(2*i + 1)] = 1.0;
+    }        
+#endif
+
+
+#ifndef OPENCL_CODE
+    cout << "Executing serial code...";
+    clock_t start, end;
+    start = clock();
+    matrix_mult(A, B, X, a_dim, a_dim, b_col_dim, alpha);
+    matrix_add(X, C, c_row_dim, c_col_dim, beta); 
     //print_matrix(B, b_row_dim, b_col_dim);
+    end = clock();
+    cout << "Done!!" << endl;
+    cout << "Serial time = " << (double)(end-start)/CLOCKS_PER_SEC<< " seconds"<<endl;
 #endif    
     
+#endif    
     
+#ifdef OPENCL_CODE 
     /* Create a device */
     device = create_device();
     
@@ -126,7 +180,7 @@ int main()
     /* Create buffer */
     A_buffer = clCreateBuffer(context, 
                   CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-                  (a_dim*a_dim)*sizeof(float), A, &err);
+                  a_size*sizeof(float), A, &err);
     //A_buffer = clCreateBuffer(context, 
     //              CL_MEM_READ_ONLY,
     //              (a_dim*a_dim)*sizeof(float), NULL, &err);
@@ -138,7 +192,7 @@ int main()
     
     B_buffer = clCreateBuffer(context, 
                   CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-                  (b_row_dim*b_col_dim)*sizeof(float), B, &err);
+                  b_size*sizeof(float), B, &err);
     //B_buffer = clCreateBuffer(context, 
     //              CL_MEM_READ_ONLY,
     //              (b_row_dim*b_col_dim)*sizeof(float), NULL, &err);
@@ -150,7 +204,7 @@ int main()
 
     C_buffer = clCreateBuffer(context, 
                   CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
-                 (c_row_dim*c_col_dim)*sizeof(float), C, &err);
+                  c_size*sizeof(float), C, &err);
     //C_buffer = clCreateBuffer(context, 
     //              CL_MEM_READ_WRITE,
     //              (c_row_dim*c_col_dim)*sizeof(float), NULL, &err);
@@ -248,15 +302,15 @@ int main()
    }*/
 
    
-   err = clEnqueueWriteBuffer(queue, C_buffer, 
+   /*err = clEnqueueWriteBuffer(queue, C_buffer, 
                                  CL_TRUE, 0, 
-                                 sizeof(float)*(c_row_dim*c_col_dim), 
+                                 sizeof(float)*c_size, 
                                  C, 0, NULL, NULL);
    if(err < 0) 
    {
       perror("Unable to write buffer");
       exit(1);
-   }
+   }*/
    
       
    
@@ -280,7 +334,7 @@ int main()
 //---------------------------------------------------------------------------------------  
   cl_ulong ev_start_time = (cl_ulong)0;
   cl_ulong ev_end_time   = (cl_ulong)0;
-  size_t ret_size;
+  //size_t ret_size;
   
   err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &ev_start_time, NULL);
   if(err < 0)
@@ -296,20 +350,44 @@ int main()
       exit(1);
   }
 
+  cl_ulong run_time = ev_end_time - ev_start_time;
+  
+  cout<<"Run time : "<< run_time << " ns" << endl;
    
    
-   /* Read the results */
+
+  
+  /* Read the results */
+   cl_event read_prof_event;
    err = clEnqueueReadBuffer(queue, C_buffer, CL_TRUE, 0, 
-         (c_row_dim*c_col_dim)*sizeof(float), C, 0, NULL, NULL);
+         c_size*sizeof(float), C, 0, NULL, &read_prof_event);
    if(err < 0) {
       perror("Couldn't read the buffer");
       exit(1);   
    }
    
-
-   cl_ulong run_time = ev_end_time - ev_start_time;
+//
+//  Read data profiling
+//
+   err = clGetEventProfilingInfo(read_prof_event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &ev_start_time, NULL);
+   if(err < 0)
+   {
+       perror("Error: clGetEventProfilingInfo");
+       exit(1);
+   }
   
-   cout<<"Run time : "<< run_time << " ns" << endl;
+   err = clGetEventProfilingInfo(read_prof_event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &ev_end_time, NULL);
+   if(err < 0)
+   {
+       perror("Error: clGetEventProfilingInfo");
+       exit(1);
+   }
+    
+   run_time = ev_end_time - ev_start_time;
+  
+   cout<<"Read time : "<< run_time << " ns" << endl;
+
+   
 
    
    
@@ -322,6 +400,8 @@ int main()
    clReleaseCommandQueue(queue);
    clReleaseProgram(program);
    clReleaseContext(context);
+
+#endif
    
    delete [] A;
    delete [] B;

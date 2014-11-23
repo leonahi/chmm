@@ -1,3 +1,8 @@
+//inline void complex_add(float* a_real, float* a_imag,   );
+//inline void complex_subtract(float );
+//inline void complex_multiply(float );
+
+
 __kernel void chmm(__global float* A, 
                    __global float* B, 
                    __global float* C, 
@@ -20,9 +25,9 @@ __kernel void chmm(__global float* A,
 
     if(global_id == 0)
     {
-        printf("Global size = %d\n", global_size);
-        printf("Local size = %d\n", local_size);
-        printf("Number of groups = %d\n", num_groups);
+       // printf("Global size = %d\n", global_size);
+       // printf("Local size = %d\n", local_size);
+        //printf("Number of groups = %d\n", num_groups);
     }
      
     //float temp = a_dim/local_size;
@@ -30,8 +35,55 @@ __kernel void chmm(__global float* A,
     uint col_width = points_per_group/2;
     uint iter_per_col = (a_dim/col_width) + 1;
     uint col_done=0;
+
+/*
+// chmm complex matrices
+    col_width = points_per_group/4;
+    float partial_sum[2] = {0,0};
+    if(global_id < global_size)
+    {
+        //printf("column width : %d\n", col_width);
+        //printf("iteration per column : %d\n", iter_per_col);
+        
+        for(int i=0; i<b_col_dim; ++i)
+        {
+            //partial_sum[0] = 0;  // real part
+            //partial_sum[1] = 0;  // imag part
+            col_done = 0;
+            for(int itr=0; itr<iter_per_col; ++itr)
+            {
+                for(int j=0; j<col_width; ++j)
+                {
+                    //a_row_vec[2*j] = A[2*(j + itr*col_width + global_id*a_dim)];  // real part
+                    //a_row_vec[2*j + 1] = A[2*(j + itr*col_width + global_id*a_dim) + 1]; // imag part
+                    
+                    //b_col_vec[2*j] = B[2*(j*b_col_dim + itr*col_width + i)];  // real part
+                    //b_col_vec[2*j + 1] = B[2*(j*b_col_dim + itr*col_width + i) + 1];  // imag part
+                } 
+                //for(int i=0; i<col_width; i++)
+                //    printf("A[%d] = %f   ", i, A[i]);
+                for(int k=0; k<col_width && col_done<a_dim; ++k)
+                {
+                    //partial_sum[0] += a_row_vec[2*k]*b_col_vec[2*k] - a_row_vec[(2*k+1)]*b_col_vec[(2*k+1)];
+                    //partial_sum[1] += a_row_vec[(2*k+1)]*b_col_vec[2*k] + a_row_vec[2*k]*b_col_vec[(2*k+1)];  
+                    //partial_sum += a_row_vec[k]*b_col_vec[k]; 
+                    //printf("partial_sum = %f : %d\n", partial_sum, global_id);
+                    ++col_done;
+                }
+                //printf("\n");
+                //printf("\n");
+            }
+            
+            //printf("partial_sum = %f : %d\n", partial_sum, global_id);
+            //C[i + global_id*b_col_dim] = alpha*partial_sum + beta*C[i + global_id*b_col_dim];
+        }
+    }
+    */
     
-    float partial_sum=0;
+    
+
+// chmm for real numbers    
+    float partial_sum = 0;
     if(global_id < global_size)
     {
         //printf("column width : %d\n", col_width);
@@ -64,8 +116,6 @@ __kernel void chmm(__global float* A,
             C[i + global_id*b_col_dim] = alpha*partial_sum + beta*C[i + global_id*b_col_dim];
         }
     }
-    
-    
     
     /*float partial_sum=0;
     if(global_id < global_size)
